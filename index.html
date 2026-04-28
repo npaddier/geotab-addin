@@ -1,31 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>Quick Repair Add-in</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        button { 
+            background: #2563eb; color: white; border: none; 
+            padding: 10px 20px; border-radius: 5px; cursor: pointer; 
+        }
+        button:hover { background: #1d4ed8; }
+    </style>
 </head>
 <body>
-    <div id="quickRepairContent">
-        <h1>Quick Repair Tool</h1>
-        <p>If you see this text, the Add-in is loading correctly!</p>
-    </div>
+    <h3>Quick Repair Action</h3>
+    <p>Click below to create a work order and clear the red defect icon.</p>
+    <button id="repairBtn">Create & Clear</button>
 
     <script>
-        // Use the EXACT name from your config.json
+        // MUST MATCH YOUR CONFIG.JSON NAME
         geotab.addin.QuickRepairAddin = function (api, state) {
             return {
                 initialize: function (api, state, callback) {
-                    console.log("Initializing Add-in...");
-                    // This is the "on switch." Without it, the page stays blank.
+                    console.log("Add-in initialized");
+                    // PRO TIP: If this isn't called, the page is blank!
                     callback();
                 },
                 focus: function (api, state) {
-                    console.log("Add-in has focus");
-                    // Place your Work Order logic here later
+                    document.getElementById("repairBtn").onclick = function() {
+                        let inspectionId = state.getState().id;
+                        let deviceId = state.getState().device ? state.getState().device.id : null;
+
+                        if (!inspectionId) {
+                            alert("No inspection detected. Please open an inspection first.");
+                            return;
+                        }
+
+                        api.call("Add", {
+                            typeName: "MaintenanceRecord",
+                            entity: {
+                                device: { id: deviceId },
+                                status: "Completed",
+                                notes: "Closed via QuickRepairAddin"
+                            }
+                        }, function() {
+                            api.call("Set", {
+                                typeName: "DVIRLog",
+                                entity: {
+                                    id: inspectionId,
+                                    repairStatus: "Repaired",
+                                    repairDate: new Date().toISOString()
+                                }
+                            }, function() {
+                                alert("Success! Work order created and defect cleared.");
+                                location.reload();
+                            });
+                        });
+                    };
                 },
-                blur: function (api, state) {
-                    console.log("User moved away");
-                }
+                blur: function () {}
             };
         };
     </script>
